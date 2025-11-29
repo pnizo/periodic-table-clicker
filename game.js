@@ -450,10 +450,28 @@ function init() {
   document.getElementById('neutronUpgrade').addEventListener('click', () => upgradeGenerator('neutrons'));
 
   // Reset button
+  // Reset button
+  const resetModal = document.getElementById('resetModal');
+  const confirmResetBtn = document.getElementById('confirmReset');
+  const cancelResetBtn = document.getElementById('cancelReset');
+
   document.getElementById('resetButton').addEventListener('click', () => {
-    if (confirm('本当に進行データをリセットしますか?\nこの操作は取り消せません。')) {
-      localStorage.removeItem('periodicTableGame');
-      location.reload();
+    resetModal.classList.add('active');
+  });
+
+  cancelResetBtn.addEventListener('click', () => {
+    resetModal.classList.remove('active');
+  });
+
+  confirmResetBtn.addEventListener('click', () => {
+    localStorage.removeItem('periodicTableGame');
+    location.reload();
+  });
+
+  // Close modal when clicking outside
+  resetModal.addEventListener('click', (e) => {
+    if (e.target === resetModal) {
+      resetModal.classList.remove('active');
     }
   });
 
