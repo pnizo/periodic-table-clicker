@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>元素周期表クリッカー - Periodic Table Clicker</title>
-    <meta name="description" content="周期表をモチーフにした放置ゲーム。粒子を生成し、元素を合成して宇宙のエネルギーを最大化しよう！">
+    <title>Periodic Table Clicker</title>
+    <meta name="description" content="Periodic Table Clicker">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -18,109 +18,120 @@
     <div class="background-particles"></div>
 
     <div class="game-container">
-        <!-- Main Game Area - Two Pane Layout -->\n <div class="game-main">
+        <!-- Main Game Area - Two Pane Layout -->
+        <div class="game-main">
             <!-- Left Panel: Energy & Generators (Full Height) -->
             <div class="left-panel">
                 <!-- Energy Section -->
                 <section class="energy-section">
                     <div class="energy-display">
-                        <div class="energy-label">宇宙エネルギー</div>
+                        <div class="energy-unit">E = </div>
                         <div class="energy-value" id="energyValue">0</div>
-                        <div class="energy-unit">e</div>
                     </div>
                     <button class="click-button" id="clickButton">
                         <span class="click-icon">⚡</span>
-                        <span class="click-text">エネルギー生成</span>
+                        <span class="click-text">Generate</span>
                     </button>
                     <div class="energy-rate">
-                        <span>自動生成: </span>
+                        <span>Auto Generate: </span>
                         <span id="energyRate">0.0</span>
-                        <span> e/秒</span>
+                        <span> E/sec.</span>
                     </div>
                 </section>
 
                 <!-- Particle Generators -->
                 <section class="generators-section">
-                    <h2 class="section-title">
-                        <span class="section-icon">🔬</span>
-                        粒子生成機
-                    </h2>
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🔬</span>
+                            Generators
+                        </h2>
+                        <div class="multiplier-display">
+                            Multiplier: x<span id="multiplierValue">1.0</span>
+                        </div>
+                    </div>
                     <div class="generators-grid">
                         <!-- Electron Generator -->
                         <div class="generator-card" data-type="electrons">
-                            <div class="generator-header">
-                                <div class="generator-icon">e⁻</div>
-                                <div class="generator-info">
-                                    <div class="generator-name">電子生成機</div>
-                                    <div class="generator-level">Lv. <span id="electronLevel">0</span></div>
+                            <div class="generator-content">
+                                <div class="generator-header">
+                                    <div class="generator-icon">e⁻</div>
+                                    <div class="generator-info">
+                                        <div class="generator-name">Electron</div>
+                                        <div class="generator-level">Lv. <span id="electronLevel">0</span></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="generator-stats">
-                                <div class="stat-row">
-                                    <span class="stat-name">保有数:</span>
-                                    <span class="stat-number" id="electronCount">0</span>
-                                </div>
-                                <div class="stat-row">
-                                    <span class="stat-name">生成速度:</span>
-                                    <span class="stat-number" id="electronRate">0.0</span>
-                                    <span>/秒</span>
+                                <div class="generator-stats">
+                                    <div class="stat-row">
+                                        <span class="stat-name">Count:</span>
+                                        <span class="stat-number" id="electronCount">0</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-name">Generation Rate:</span>
+                                        <span class="stat-number" id="electronRate">0.0</span>
+                                        <span>/sec.</span>
+                                    </div>
                                 </div>
                             </div>
                             <button class="upgrade-button" id="electronUpgrade">
-                                <span class="button-text">アップグレード</span>
-                                <span class="button-cost" id="electronCost">10 e</span>
+                                <span class="button-text">Upgrade</span>
+                                <span class="button-cost" id="electronCost">10 E</span>
                             </button>
                         </div>
 
                         <!-- Proton Generator -->
                         <div class="generator-card" data-type="protons">
-                            <div class="generator-header">
-                                <div class="generator-icon">p⁺</div>
-                                <div class="generator-info">
-                                    <div class="generator-name">陽子生成機</div>
-                                    <div class="generator-level">Lv. <span id="protonLevel">0</span></div>
+                            <div class="generator-content">
+                                <div class="generator-header">
+                                    <div class="generator-icon">p⁺</div>
+                                    <div class="generator-info">
+                                        <div class="generator-name">Proton</div>
+                                        <div class="generator-level">Lv. <span id="protonLevel">0</span></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="generator-stats">
-                                <div class="stat-row">
-                                    <span class="stat-name">保有数:</span>
-                                    <span class="stat-number" id="protonCount">0</span>
-                                </div>
-                                <div class="stat-row">
-                                    <span class="stat-name">生成速度:</span>
-                                    <span class="stat-number" id="protonRate">0.0</span>
-                                    <span>/秒</span>
+                                <div class="generator-stats">
+                                    <div class="stat-row">
+                                        <span class="stat-name">Count:</span>
+                                        <span class="stat-number" id="protonCount">0</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-name">Generation Rate:</span>
+                                        <span class="stat-number" id="protonRate">0.0</span>
+                                        <span>/sec.</span>
+                                    </div>
                                 </div>
                             </div>
                             <button class="upgrade-button" id="protonUpgrade">
-                                <span class="button-text">アップグレード</span>
-                                <span class="button-cost" id="protonCost">10 e</span>
+                                <span class="button-text">Upgrade</span>
+                                <span class="button-cost" id="protonCost">10 E</span>
                             </button>
                         </div>
 
                         <!-- Neutron Generator -->
                         <div class="generator-card" data-type="neutrons">
-                            <div class="generator-header">
-                                <div class="generator-icon">n⁰</div>
-                                <div class="generator-info">
-                                    <div class="generator-name">中性子生成機</div>
-                                    <div class="generator-level">Lv. <span id="neutronLevel">0</span></div>
+                            <div class="generator-content">
+                                <div class="generator-header">
+                                    <div class="generator-icon">n⁰</div>
+                                    <div class="generator-info">
+                                        <div class="generator-name">Neutron</div>
+                                        <div class="generator-level">Lv. <span id="neutronLevel">0</span></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="generator-stats">
-                                <div class="stat-row">
-                                    <span class="stat-name">保有数:</span>
-                                    <span class="stat-number" id="neutronCount">0</span>
-                                </div>
-                                <div class="stat-row">
-                                    <span class="stat-name">生成速度:</span>
-                                    <span class="stat-number" id="neutronRate">0.0</span>
-                                    <span>/秒</span>
+                                <div class="generator-stats">
+                                    <div class="stat-row">
+                                        <span class="stat-name">Count:</span>
+                                        <span class="stat-number" id="neutronCount">0</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-name">Generation Rate:</span>
+                                        <span class="stat-number" id="neutronRate">0.0</span>
+                                        <span>/sec.</span>
+                                    </div>
                                 </div>
                             </div>
                             <button class="upgrade-button" id="neutronUpgrade">
-                                <span class="button-text">アップグレード</span>
-                                <span class="button-cost" id="neutronCost">10 e</span>
+                                <span class="button-text">Upgrade</span>
+                                <span class="button-cost" id="neutronCost">10 E</span>
                             </button>
                         </div>
                     </div>
@@ -133,32 +144,40 @@
                 <div class="right-panel-header">
                     <h1 class="game-title">
                         <span class="title-icon">⚛️</span>
-                        元素周期表クリッカー
+                        Periodic Table Clicker
                     </h1>
                     <div class="header-controls">
                         <div class="stats-bar">
                             <div class="stat-item">
-                                <span class="stat-label">総クリック数</span>
+                                <span class="stat-label">Total Clicks</span>
                                 <span class="stat-value" id="totalClicks">0</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label">プレイ時間</span>
+                                <span class="stat-label">Play Time</span>
                                 <span class="stat-value" id="playTime">0:00</span>
                             </div>
                         </div>
                         <button class="reset-button" id="resetButton">
                             <span class="reset-icon">🔄</span>
-                            <span>リセット</span>
+                            <span>Re-universe</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Elements Section -->
                 <section class="elements-section">
-                    <h2 class="section-title">
-                        <span class="section-icon">🧪</span>
-                        元素合成
-                    </h2>
+                    <div class="elements-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🧪</span>
+                            Element Synthesis
+                        </h2>
+                        <div class="bulk-controls">
+                            <button class="bulk-btn active" data-multiplier="1">x1</button>
+                            <button class="bulk-btn" data-multiplier="10">x10</button>
+                            <button class="bulk-btn" data-multiplier="100">x100</button>
+                            <button class="bulk-btn" data-multiplier="max">MAX</button>
+                        </div>
+                    </div>
                     <div class="elements-grid" id="elementsGrid">
                         <!-- Elements will be dynamically generated here -->
                     </div>
@@ -170,11 +189,21 @@
     <!-- Reset Confirmation Modal -->
     <div class="modal-overlay" id="resetModal">
         <div class="modal-content">
-            <h3 class="modal-title">データリセットの確認</h3>
-            <p class="modal-message">本当に進行データをリセットしますか？<br>この操作は取り消せません。</p>
+            <h3 class="modal-title">Reset Confirmation</h3>
+            <p class="modal-message">Are you sure you want to reset your progress? This action cannot be undone.</p>
+            <div class="reset-info">
+                <div class="reset-info-row">
+                    <span class="reset-info-label">Total Energy Earned:</span>
+                    <span class="reset-info-value" id="resetTotalEnergy">0</span>
+                </div>
+                <div class="reset-info-row">
+                    <span class="reset-info-label">New Multiplier:</span>
+                    <span class="reset-info-value highlight" id="resetNewMultiplier">1.0</span>
+                </div>
+            </div>
             <div class="modal-actions">
-                <button class="modal-button cancel" id="cancelReset">キャンセル</button>
-                <button class="modal-button confirm" id="confirmReset">リセットする</button>
+                <button class="modal-button cancel" id="cancelReset">Cancel</button>
+                <button class="modal-button confirm" id="confirmReset">Reset</button>
             </div>
         </div>
     </div>
