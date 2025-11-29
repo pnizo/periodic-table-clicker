@@ -33,17 +33,17 @@ const GENERATOR_CONFIG = {
   electrons: {
     baseCost: 10,
     baseRate: 0.1667,
-    costMultiplier: 1.15
+    costMultiplier: 1.1
   },
   protons: {
     baseCost: 10,
     baseRate: 0.1667,
-    costMultiplier: 1.15
+    costMultiplier: 1.1
   },
   neutrons: {
     baseCost: 10,
     baseRate: 0.1667,
-    costMultiplier: 1.15
+    costMultiplier: 1.1
   }
 };
 
@@ -412,19 +412,21 @@ let ELEMENTS = [];
 
 // ===== Utility Functions =====
 function formatNumber(num) {
-  if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-  return Math.floor(num).toLocaleString();
-}
-
-function formatMultiplier(num) {
+  if (num >= 1e18) return (num / 1e18).toFixed(3) + "E";
+  if (num >= 1e15) return (num / 1e15).toFixed(3) + "P";
   if (num >= 1e12) return (num / 1e12).toFixed(3) + "T";
   if (num >= 1e9) return (num / 1e9).toFixed(3) + "B";
   if (num >= 1e6) return (num / 1e6).toFixed(3) + "M";
   if (num >= 1e3) return (num / 1e3).toFixed(3) + "K";
-  return num.toFixed(3);
+  return Math.floor(num).toLocaleString();
+}
+
+function formatMultiplier(num) {
+  if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+  return num.toFixed(2);
 }
 
 function formatDecimal(num) {
@@ -647,7 +649,7 @@ function updateUI() {
     }
   }
 
-  document.getElementById('energyRate').textContent = formatDecimal(energyRate);
+  document.getElementById('energyRate').textContent = formatNumber(energyRate);
 
   // Multiplier display
   document.getElementById('multiplierValue').textContent = formatMultiplier(gameState.multiplier);
