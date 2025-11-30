@@ -1402,12 +1402,13 @@ function updateGeneratorUI(type) {
   const count = gameState.particles[type];
   const rate = getGeneratorRate(type);
   const cost = getGeneratorCost(type);
+  const achievementBonus = getAchievementBonus();
 
   const capitalizedType = type.charAt(0).toUpperCase() + type.slice(0, -1);
 
   document.getElementById(`${type.slice(0, -1)}Level`).textContent = level;
   document.getElementById(`${type.slice(0, -1)}Count`).textContent = formatNumber(count);
-  document.getElementById(`${type.slice(0, -1)}Rate`).textContent = formatDecimal(rate);
+  document.getElementById(`${type.slice(0, -1)}Rate`).textContent = formatDecimal(rate * achievementBonus);
   document.getElementById(`${type.slice(0, -1)}Cost`).textContent = formatNumber(cost) + ' E';
 
   const button = document.getElementById(`${type.slice(0, -1)}Upgrade`);
