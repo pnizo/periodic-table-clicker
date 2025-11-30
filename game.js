@@ -529,6 +529,22 @@ function formatDecimal(num) {
   return num.toFixed(1);
 }
 
+// Generation Rate用: 小数第1位まで表示 + 単位
+ function formatRate(num) {
+  const n = typeof num === 'bigint' ? Number(num) : num;
+  if (n >= 1e30) return (n / 1e30).toFixed(2) + "Q";
+  if (n >= 1e27) return (n / 1e27).toFixed(2) + "R";
+  if (n >= 1e24) return (n / 1e24).toFixed(2) + "Y";
+  if (n >= 1e21) return (n / 1e21).toFixed(2) + "Z";
+  if (n >= 1e18) return (n / 1e18).toFixed(2) + "E";
+  if (n >= 1e15) return (n / 1e15).toFixed(2) + "P";
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "G";
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + "k";
+  return n.toFixed(2);
+}
+
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -1408,7 +1424,7 @@ function updateGeneratorUI(type) {
 
   document.getElementById(`${type.slice(0, -1)}Level`).textContent = level;
   document.getElementById(`${type.slice(0, -1)}Count`).textContent = formatNumber(count);
-  document.getElementById(`${type.slice(0, -1)}Rate`).textContent = formatDecimal(rate * achievementBonus);
+  document.getElementById(`${type.slice(0, -1)}Rate`).textContent = formatRate(rate * achievementBonus);
   document.getElementById(`${type.slice(0, -1)}Cost`).textContent = formatNumber(cost) + ' E';
 
   const button = document.getElementById(`${type.slice(0, -1)}Upgrade`);
