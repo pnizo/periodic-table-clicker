@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>データ完全消去 - Periodic Table Clicker</title>
+    <title>Complete Data Erasure - Periodic Table Clicker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -286,43 +286,43 @@
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-link">← ゲームに戻る</a>
+        <a href="index.html" class="back-link">← Back to Game</a>
         
         <div class="card">
             <div class="header">
                 <div class="header-icon">⚠️</div>
-                <h1>データ完全消去</h1>
-                <p>すべてのゲームデータを削除します</p>
+                <h1>Complete Data Erasure</h1>
+                <p>All game data will be deleted</p>
             </div>
 
             <div class="form-content" id="formContent">
                 <div class="warning-box">
-                    <h3>⚠️ 警告：この操作は取り消せません</h3>
+                    <h3>⚠️ Warning: This action cannot be undone</h3>
                     <ul>
-                        <li>すべての元素・粒子が削除されます</li>
-                        <li>すべての実績が削除されます</li>
-                        <li>総獲得エネルギー・倍率がリセットされます</li>
-                        <li>プレイ時間・クリック数がリセットされます</li>
-                        <li>ゲーム内のRe-universeとは異なり、完全に初期状態に戻ります</li>
+                        <li>All elements and particles will be deleted</li>
+                        <li>All achievements will be deleted</li>
+                        <li>Total earned energy and multipliers will be reset</li>
+                        <li>Play time and click count will be reset</li>
+                        <li>Unlike the in-game Re-universe, this will completely reset to the initial state</li>
                     </ul>
                 </div>
 
                 <div class="data-preview">
-                    <h3>現在のセーブデータ</h3>
+                    <h3>Current Save Data</h3>
                     <div class="data-item">
-                        <span class="label">実績数</span>
+                        <span class="label">Achievements</span>
                         <span class="value" id="achievementCount">-</span>
                     </div>
                     <div class="data-item">
-                        <span class="label">累計クリック数</span>
+                        <span class="label">Total Clicks</span>
                         <span class="value" id="totalClicks">-</span>
                     </div>
                     <div class="data-item">
-                        <span class="label">累計プレイ時間</span>
+                        <span class="label">Total Play Time</span>
                         <span class="value" id="totalPlayTime">-</span>
                     </div>
                     <div class="data-item">
-                        <span class="label">総獲得エネルギー</span>
+                        <span class="label">Total Earned Energy</span>
                         <span class="value" id="totalEnergy">-</span>
                     </div>
                 </div>
@@ -330,25 +330,25 @@
                 <div class="confirmation">
                     <label>
                         <input type="checkbox" id="confirmCheck">
-                        データを完全に削除することを理解しました
+                        I understand that the data will be completely deleted
                     </label>
                 </div>
 
                 <div class="button-group">
-                    <a href="index.html" class="btn btn-cancel">キャンセル</a>
-                    <button class="btn btn-danger" id="deleteBtn" disabled>完全消去を実行</button>
+                    <a href="index.html" class="btn btn-cancel">Cancel</a>
+                    <button class="btn btn-danger" id="deleteBtn" disabled>Execute Complete Erasure</button>
                 </div>
 
                 <div class="storage-keys">
-                    削除対象: <code>periodicTableGame</code>, <code>periodicTablePersistent</code>
+                    Targets for deletion: <code>periodicTableGame</code>, <code>periodicTablePersistent</code>
                 </div>
             </div>
 
             <div class="success-message" id="successMessage">
                 <div class="icon">✅</div>
-                <h2>削除完了</h2>
-                <p>すべてのゲームデータが削除されました。</p>
-                <a href="index.html" class="btn btn-cancel" style="display: inline-block; flex: none;">ゲームを始める</a>
+                <h2>Deletion Complete</h2>
+                <p>All game data has been deleted.</p>
+                <a href="index.html" class="btn btn-cancel" style="display: inline-block; flex: none;">Start Game</a>
             </div>
         </div>
     </div>
@@ -412,13 +412,13 @@
             const persistentData = localStorage.getItem('periodicTablePersistent');
 
             if (!gameData && !persistentData) {
-                document.getElementById('achievementCount').textContent = 'データなし';
+                document.getElementById('achievementCount').textContent = 'No Data';
                 document.getElementById('achievementCount').classList.add('none');
-                document.getElementById('totalClicks').textContent = 'データなし';
+                document.getElementById('totalClicks').textContent = 'No Data';
                 document.getElementById('totalClicks').classList.add('none');
-                document.getElementById('totalPlayTime').textContent = 'データなし';
+                document.getElementById('totalPlayTime').textContent = 'No Data';
                 document.getElementById('totalPlayTime').classList.add('none');
-                document.getElementById('totalEnergy').textContent = 'データなし';
+                document.getElementById('totalEnergy').textContent = 'No Data';
                 document.getElementById('totalEnergy').classList.add('none');
                 return;
             }
@@ -427,10 +427,10 @@
                 if (persistentData) {
                     const persistent = parseWithBigInt(persistentData);
                     const achievementCount = Object.keys(persistent.achievements || {}).length;
-                    document.getElementById('achievementCount').textContent = achievementCount > 0 ? `${achievementCount}個` : '0個';
+                    document.getElementById('achievementCount').textContent = achievementCount > 0 ? `${achievementCount} items` : '0 items';
                     
                     const totalClicks = persistent.totalClicks || 0;
-                    document.getElementById('totalClicks').textContent = formatNumber(totalClicks) + '回';
+                    document.getElementById('totalClicks').textContent = formatNumber(totalClicks) + ' clicks';
                     
                     const totalPlayTime = persistent.totalPlayTime || 0;
                     document.getElementById('totalPlayTime').textContent = formatTime(totalPlayTime);
@@ -460,6 +460,57 @@
             document.getElementById('formContent').classList.add('hide');
             document.getElementById('successMessage').classList.add('show');
         });
+
+        // 複数タブ抑止チェック
+        (function() {
+            const TAB_ID = 'periodicTableResetTab_' + Date.now() + '_' + Math.random();
+            const CHANNEL_NAME = 'periodicTableChannel';
+            const channel = new BroadcastChannel(CHANNEL_NAME);
+            
+            // 既存タブ(index.html)にping送信
+            channel.postMessage({ type: 'ping', from: TAB_ID });
+            
+            let duplicateDetected = false;
+            
+            channel.onmessage = (e) => {
+                if (e.data.type === 'pong' && e.data.to === TAB_ID) {
+                    // 既存タブからの応答 = ゲームが実行中
+                    if (!duplicateDetected) {
+                        duplicateDetected = true;
+                        showGameRunningWarning();
+                    }
+                }
+            };
+            
+            function showGameRunningWarning() {
+                const container = document.querySelector('.container');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h1 style="font-family: 'Orbitron', sans-serif; color: #f59e0b; margin-bottom: 1rem;">The game is currently running.</h1>
+                        <p style="color: #94a3b8; margin-bottom: 2rem;">
+                            Please close the game tab before deleting data.<br>
+                            Deleting data while the game is running may cause the data to be saved again.
+                        </p>
+                        <a href="index.html" style="
+                            display: inline-block;
+                            background: rgba(148, 163, 184, 0.2);
+                            color: #94a3b8;
+                            border: 1px solid rgba(148, 163, 184, 0.3);
+                            padding: 1rem 2rem;
+                            border-radius: 0.75rem;
+                            font-size: 1rem;
+                            text-decoration: none;
+                            font-family: 'Inter', sans-serif;
+                        ">Return to Game</a>
+                    </div>
+                `;
+            }
+            
+            window.addEventListener('beforeunload', () => {
+                channel.close();
+            });
+        })();
 
         // 初期化
         loadDataPreview();

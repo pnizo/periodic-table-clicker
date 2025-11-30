@@ -211,6 +211,9 @@
                 <button class="modal-button cancel" id="cancelReset">Cancel</button>
                 <button class="modal-button confirm" id="confirmReset">Reset</button>
             </div>
+            <div class="modal-footer-link">
+                <a href="all_reset.html" class="danger-link">To completely delete your data, click here.</a>
+            </div>
         </div>
     </div>
 
@@ -267,6 +270,72 @@
         </div>
     </div>
 
+    <script>
+        // 複数タブ抑止
+        (function() {
+            const TAB_ID = 'periodicTableTab_' + Date.now() + '_' + Math.random();
+            const CHANNEL_NAME = 'periodicTableChannel';
+            const channel = new BroadcastChannel(CHANNEL_NAME);
+            
+            // 既存タブにping送信
+            channel.postMessage({ type: 'ping', from: TAB_ID });
+            
+            let duplicateDetected = false;
+            
+            channel.onmessage = (e) => {
+                if (e.data.type === 'ping' && e.data.from !== TAB_ID) {
+                    // 他のタブからpingが来た = このタブは既存タブ
+                    channel.postMessage({ type: 'pong', from: TAB_ID, to: e.data.from });
+                } else if (e.data.type === 'pong' && e.data.to === TAB_ID) {
+                    // 既存タブからの応答 = 重複検出
+                    if (!duplicateDetected) {
+                        duplicateDetected = true;
+                        showDuplicateWarning();
+                    }
+                }
+            };
+            
+            function showDuplicateWarning() {
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background: linear-gradient(135deg, #050814 0%, #0a0e27 100%);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        font-family: 'Inter', sans-serif;
+                        color: #f1f5f9;
+                        padding: 2rem;
+                        text-align: center;
+                    ">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h1 style="font-family: 'Orbitron', sans-serif; color: #f59e0b; margin-bottom: 1rem;">It is already open in another tab.</h1>
+                        <p style="color: #94a3b8; margin-bottom: 2rem; max-width: 400px;">
+                            Periodic Table Clicker can only run in one tab at a time.
+To maintain data integrity, please close this tab.
+                        </p>
+                        <button onclick="window.close()" style="
+                            background: #3b82f6;
+                            color: white;
+                            border: none;
+                            padding: 1rem 2rem;
+                            border-radius: 0.75rem;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            font-family: 'Inter', sans-serif;
+                        ">このタブを閉じる</button>
+                    </div>
+                `;
+            }
+            
+            // タブを閉じる時にクリーンアップ
+            window.addEventListener('beforeunload', () => {
+                channel.close();
+            });
+        })();
+    </script>
     <script src="game.js"></script>
 </body>
 
