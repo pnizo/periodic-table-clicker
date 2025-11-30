@@ -396,13 +396,13 @@
             const days = Math.floor(hours / 24);
 
             if (days > 0) {
-                return `${days}日 ${hours % 24}時間 ${minutes % 60}分`;
+                return `${days}day(s) ${hours % 24}hour(s) ${minutes % 60}minute(s)`;
             } else if (hours > 0) {
-                return `${hours}時間 ${minutes % 60}分 ${seconds % 60}秒`;
+                return `${hours}hour(s) ${minutes % 60}minute(s) ${seconds % 60}second(s)`;
             } else if (minutes > 0) {
-                return `${minutes}分 ${seconds % 60}秒`;
+                return `${minutes}minute(s) ${seconds % 60}second(s)`;
             } else {
-                return `${seconds}秒`;
+                return `${seconds}second(s)`;
             }
         }
 
