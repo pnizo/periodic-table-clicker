@@ -1305,10 +1305,10 @@ function gameLoop() {
   
   const achievementBonus = getAchievementBonus();
 
-  // Generate particles (小数を蓄積し、1以上になったらBigIntに変換)
+  // Generate particles (小数を蓄積し、1以上になったらBigIntに変換、実績ボーナス適用)
   for (const [type, level] of Object.entries(gameState.generators)) {
     const rate = getGeneratorRate(type);
-    particleAccumulator[type] += rate * deltaTime;
+    particleAccumulator[type] += rate * deltaTime * achievementBonus;
     if (particleAccumulator[type] >= 1) {
       const toAdd = BigInt(Math.floor(particleAccumulator[type]));
       gameState.particles[type] += toAdd;
