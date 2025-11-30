@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>データ完全消去 - Periodic Table Clicker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-darker: #050814;
+            --bg-card: rgba(15, 23, 42, 0.8);
+            --primary: #3b82f6;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --warning: #f59e0b;
+            --border: rgba(148, 163, 184, 0.1);
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
+            --font-ui: 'Inter', sans-serif;
+            --font-display: 'Orbitron', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            color: var(--danger);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .warning-box h3 {
+            color: var(--danger);
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .warning-box ul {
+            list-style: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .warning-box li {
+            padding: 0.3rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .warning-box li::before {
+            content: "•";
+            color: var(--danger);
+            position: absolute;
+            left: 0.5rem;
+        }
+
+        .data-preview {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .data-preview h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-item .label {
+            color: var(--text-secondary);
+        }
+
+        .data-item .value {
+            color: var(--text-primary);
+            font-family: var(--font-display);
+        }
+
+        .data-item .value.none {
+            color: var(--text-muted);
+            font-style: italic;
+            font-family: var(--font-ui);
+        }
+
+        .confirmation {
+            margin-bottom: 1.5rem;
+        }
+
+        .confirmation label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .confirmation input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--danger);
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: var(--font-ui);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(148, 163, 184, 0.3);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: var(--danger-dark);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-danger:disabled {
+            background: rgba(239, 68, 68, 0.3);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: not-allowed;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .success-message .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-message h2 {
+            font-family: var(--font-display);
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .success-message p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-content {
+            display: block;
+        }
+
+        .form-content.hide {
+            display: none;
+        }
+
+        .storage-keys {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .storage-keys code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← ゲームに戻る</a>
+        
+        <div class="card">
+            <div class="header">
+                <div class="header-icon">⚠️</div>
+                <h1>データ完全消去</h1>
+                <p>すべてのゲームデータを削除します</p>
+            </div>
+
+            <div class="form-content" id="formContent">
+                <div class="warning-box">
+                    <h3>⚠️ 警告：この操作は取り消せません</h3>
+                    <ul>
+                        <li>すべての元素・粒子が削除されます</li>
+                        <li>すべての実績が削除されます</li>
+                        <li>総獲得エネルギー・倍率がリセットされます</li>
+                        <li>プレイ時間・クリック数がリセットされます</li>
+                        <li>ゲーム内のRe-universeとは異なり、完全に初期状態に戻ります</li>
+                    </ul>
+                </div>
+
+                <div class="data-preview">
+                    <h3>現在のセーブデータ</h3>
+                    <div class="data-item">
+                        <span class="label">実績数</span>
+                        <span class="value" id="achievementCount">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">累計クリック数</span>
+                        <span class="value" id="totalClicks">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">累計プレイ時間</span>
+                        <span class="value" id="totalPlayTime">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">総獲得エネルギー</span>
+                        <span class="value" id="totalEnergy">-</span>
+                    </div>
+                </div>
+
+                <div class="confirmation">
+                    <label>
+                        <input type="checkbox" id="confirmCheck">
+                        データを完全に削除することを理解しました
+                    </label>
+                </div>
+
+                <div class="button-group">
+                    <a href="index.html" class="btn btn-cancel">キャンセル</a>
+                    <button class="btn btn-danger" id="deleteBtn" disabled>完全消去を実行</button>
+                </div>
+
+                <div class="storage-keys">
+                    削除対象: <code>periodicTableGame</code>, <code>periodicTablePersistent</code>
+                </div>
+            </div>
+
+            <div class="success-message" id="successMessage">
+                <div class="icon">✅</div>
+                <h2>削除完了</h2>
+                <p>すべてのゲームデータが削除されました。</p>
+                <a href="index.html" class="btn btn-cancel" style="display: inline-block; flex: none;">ゲームを始める</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // BigInt対応のJSONパーサー
+        function parseWithBigInt(jsonString) {
+            return JSON.parse(jsonString, (key, value) => {
+                if (value && typeof value === 'object' && value.__bigint__) {
+                    return BigInt(value.__bigint__);
+                }
+                return value;
+            });
+        }
+
+        // 数値フォーマット
+        function formatNumber(num) {
+            if (typeof num === 'bigint') {
+                if (num >= 1000000000000000000000000n) return (Number(num / 1000000000000000000000n) / 1000).toFixed(2) + 'Y';
+                if (num >= 1000000000000000000000n) return (Number(num / 1000000000000000000n) / 1000).toFixed(2) + 'Z';
+                if (num >= 1000000000000000000n) return (Number(num / 1000000000000000n) / 1000).toFixed(2) + 'E';
+                if (num >= 1000000000000000n) return (Number(num / 1000000000000n) / 1000).toFixed(2) + 'P';
+                if (num >= 1000000000000n) return (Number(num / 1000000000n) / 1000).toFixed(2) + 'T';
+                if (num >= 1000000000n) return (Number(num / 1000000n) / 1000).toFixed(2) + 'G';
+                if (num >= 1000000n) return (Number(num / 1000n) / 1000).toFixed(2) + 'M';
+                if (num >= 1000n) return (Number(num) / 1000).toFixed(2) + 'k';
+                return num.toString();
+            }
+            if (num >= 1e24) return (num / 1e24).toFixed(2) + 'Y';
+            if (num >= 1e21) return (num / 1e21).toFixed(2) + 'Z';
+            if (num >= 1e18) return (num / 1e18).toFixed(2) + 'E';
+            if (num >= 1e15) return (num / 1e15).toFixed(2) + 'P';
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'G';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'k';
+            return Math.floor(num).toLocaleString();
+        }
+
+        // 時間フォーマット
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) {
+                return `${days}日 ${hours % 24}時間 ${minutes % 60}分`;
+            } else if (hours > 0) {
+                return `${hours}時間 ${minutes % 60}分 ${seconds % 60}秒`;
+            } else if (minutes > 0) {
+                return `${minutes}分 ${seconds % 60}秒`;
+            } else {
+                return `${seconds}秒`;
+            }
+        }
+
+        // データ表示
+        function loadDataPreview() {
+            const gameData = localStorage.getItem('periodicTableGame');
+            const persistentData = localStorage.getItem('periodicTablePersistent');
+
+            if (!gameData && !persistentData) {
+                document.getElementById('achievementCount').textContent = 'データなし';
+                document.getElementById('achievementCount').classList.add('none');
+                document.getElementById('totalClicks').textContent = 'データなし';
+                document.getElementById('totalClicks').classList.add('none');
+                document.getElementById('totalPlayTime').textContent = 'データなし';
+                document.getElementById('totalPlayTime').classList.add('none');
+                document.getElementById('totalEnergy').textContent = 'データなし';
+                document.getElementById('totalEnergy').classList.add('none');
+                return;
+            }
+
+            try {
+                if (persistentData) {
+                    const persistent = parseWithBigInt(persistentData);
+                    const achievementCount = Object.keys(persistent.achievements || {}).length;
+                    document.getElementById('achievementCount').textContent = achievementCount > 0 ? `${achievementCount}個` : '0個';
+                    
+                    const totalClicks = persistent.totalClicks || 0;
+                    document.getElementById('totalClicks').textContent = formatNumber(totalClicks) + '回';
+                    
+                    const totalPlayTime = persistent.totalPlayTime || 0;
+                    document.getElementById('totalPlayTime').textContent = formatTime(totalPlayTime);
+                    
+                    const totalEnergy = persistent.totalEnergyEarned || 0n;
+                    document.getElementById('totalEnergy').textContent = formatNumber(totalEnergy);
+                }
+            } catch (e) {
+                console.error('Failed to parse save data:', e);
+            }
+        }
+
+        // チェックボックスイベント
+        document.getElementById('confirmCheck').addEventListener('change', function() {
+            document.getElementById('deleteBtn').disabled = !this.checked;
+        });
+
+        // 削除ボタンイベント
+        document.getElementById('deleteBtn').addEventListener('click', function() {
+            if (!document.getElementById('confirmCheck').checked) return;
+
+            // データ削除
+            localStorage.removeItem('periodicTableGame');
+            localStorage.removeItem('periodicTablePersistent');
+
+            // UI更新
+            document.getElementById('formContent').classList.add('hide');
+            document.getElementById('successMessage').classList.add('show');
+        });
+
+        // 初期化
+        loadDataPreview();
+    </script>
+</body>
+</html>

@@ -1,53 +1,120 @@
 // ===== Game State =====
 const gameState = {
-  energy: 0,
+  energy: 0n,
   particles: {
-    electrons: 0,
-    protons: 0,
-    neutrons: 0
+    electrons: 0n,
+    protons: 0n,
+    neutrons: 0n
   },
   generators: {
     electrons: 0,
     protons: 0,
     neutrons: 0
   },
-  elements: {},
+  elements: {}, // 値はBigInt
   elementGenerators: {},
   totalClicks: 0,
   startTime: Date.now(),
   lastUpdate: Date.now(),
-  buyMultiplier: 1, // 1, 10, 100, or 'max'
-  totalEnergyEarned: 0, // 総獲得エネルギー量（リセットしても引き継がれる）
-  multiplier: 1 // 倍率（リセット時に総獲得エネルギー量のlog10にセット）
+  buyMultiplier: 1, // 1, 10, 100, 1000, 1000000, or 'max'
+  totalEnergyEarned: 0n, // 総獲得エネルギー量（リセットしても引き継がれる）
+  multiplier: 1 // 倍率（リセット時に総獲得エネルギー量のlogにセット）- Numberのまま
 };
 
 // Persistent state (survives reset)
 let persistentState = {
-  totalEnergyEarned: 0,
+  totalEnergyEarned: 0n,
   totalClicks: 0,
-  totalPlayTime: 0 // 累計プレイ時間（ミリ秒）
+  totalPlayTime: 0, // 累計プレイ時間（ミリ秒）
+  achievements: {} // 解除済み実績 { achievementId: timestamp }
 };
 
 // ===== Constants =====
 const GENERATOR_CONFIG = {
   electrons: {
-    baseCost: 10,
+    baseCost: 1,
     baseRate: 0.1667,
-    costMultiplier: 1.1
+    costMultiplier: 1.15
   },
   protons: {
-    baseCost: 10,
+    baseCost: 1840,
     baseRate: 0.1667,
-    costMultiplier: 1.1
+    costMultiplier: 1.15
   },
   neutrons: {
-    baseCost: 10,
+    baseCost: 1840,
     baseRate: 0.1667,
-    costMultiplier: 1.1
+    costMultiplier: 1.15
   }
 };
 
 const PARTICLE_ENERGY_RATE = 0.1; // Energy per particle per second
+const PARTICLE_COUNT_ENERGY_RATE = 1; // Energy from particle count (count / 60 per second)
+const AVOGADRO = 602214076000000000000000n; // アボガドロ数 (1mol) as BigInt
+
+// ===== BigInt Helper Functions =====
+// BigIntとNumberの比較・演算用ヘルパー
+function toBigInt(val) {
+  if (typeof val === 'bigint') return val;
+  if (typeof val === 'number') return BigInt(Math.floor(val));
+  if (typeof val === 'string') return BigInt(val);
+  return 0n;
+}
+
+function toNumber(val) {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'bigint') return Number(val);
+  return 0;
+}
+
+function bigIntMax(a, b) {
+  return a > b ? a : b;
+}
+
+function bigIntMin(a, b) {
+  return a < b ? a : b;
+}
+
+// ===== Achievement Definitions =====
+// 周期ごとの元素リスト
+const PERIOD_ELEMENTS = {
+  1: ['H', 'He'],
+  2: ['Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne'],
+  3: ['Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar'],
+  4: ['K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr'],
+  5: ['Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe'],
+  6: ['Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn'],
+  7: ['Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
+};
+
+// 族ごとの元素リスト
+const GROUP_ELEMENTS = {
+  1: ['H', 'Li', 'Na', 'K', 'Rb', 'Cs', 'Fr'],
+  2: ['Be', 'Mg', 'Ca', 'Sr', 'Ba', 'Ra'],
+  3: ['Sc', 'Y', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr'],
+  4: ['Ti', 'Zr', 'Hf', 'Rf'],
+  5: ['V', 'Nb', 'Ta', 'Db'],
+  6: ['Cr', 'Mo', 'W', 'Sg'],
+  7: ['Mn', 'Tc', 'Re', 'Bh'],
+  8: ['Fe', 'Ru', 'Os', 'Hs'],
+  9: ['Co', 'Rh', 'Ir', 'Mt'],
+  10: ['Ni', 'Pd', 'Pt', 'Ds'],
+  11: ['Cu', 'Ag', 'Au', 'Rg'],
+  12: ['Zn', 'Cd', 'Hg', 'Cn'],
+  13: ['B', 'Al', 'Ga', 'In', 'Tl', 'Nh'],
+  14: ['C', 'Si', 'Ge', 'Sn', 'Pb', 'Fl'],
+  15: ['N', 'P', 'As', 'Sb', 'Bi', 'Mc'],
+  16: ['O', 'S', 'Se', 'Te', 'Po', 'Lv'],
+  17: ['F', 'Cl', 'Br', 'I', 'At', 'Ts'],
+  18: ['He', 'Ne', 'Ar', 'Kr', 'Xe', 'Rn', 'Og']
+};
+
+// ランタノイド・アクチノイド
+const LANTHANIDES = ['La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu'];
+const ACTINIDES = ['Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr'];
+
+// 全元素シンボルリスト
+const ALL_ELEMENT_SYMBOLS = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'];
 
 // ===== Element Data =====
 // ===== Element Data & Generation =====
@@ -69,9 +136,13 @@ const CATEGORY_COLORS = {
 // ===== Custom Recipe Table =====
 // 元素ごとのカスタムレシピ定義（核融合反応に基づく）
 // neutrons: 必要な中性子数, energy: 必要なエネルギー, elements: 必要な元素（核融合反応の組み合わせ）
+
+// エネルギー消費係数（レシピのエネルギー値にこの係数を掛ける）
+const ENERGY_COST_MULTIPLIER = 10;
+
 const CUSTOM_RECIPES = {
-  // 水素 - 基本元素
-  H: { neutrons: 0, energy: 50, elements: {} },
+  // 水素 - 基本元素（電子1個、陽子1個を消費）
+  H: { electrons: 1, protons: 1, neutrons: 0, energy: 50, elements: {} },
   // ヘリウム - pp鎖反応: 4H → He
   He: { neutrons: 2, energy: 60, elements: { H: 4 } },
   // リチウム - ビッグバン元素合成 / 宇宙線核破砕
@@ -412,20 +483,45 @@ let ELEMENTS = [];
 
 // ===== Utility Functions =====
 function formatNumber(num) {
-  if (num >= 1e18) return (num / 1e18).toFixed(3) + "E";
-  if (num >= 1e15) return (num / 1e15).toFixed(3) + "P";
-  if (num >= 1e12) return (num / 1e12).toFixed(3) + "T";
-  if (num >= 1e9) return (num / 1e9).toFixed(3) + "B";
-  if (num >= 1e6) return (num / 1e6).toFixed(3) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(3) + "K";
-  return Math.floor(num).toLocaleString();
+  // BigIntの場合はNumberに変換（精度は落ちるが表示用なのでOK）
+  const n = typeof num === 'bigint' ? Number(num) : num;
+  if (n >= 1e30) return (n / 1e30).toFixed(3) + "Q";
+  if (n >= 1e27) return (n / 1e27).toFixed(3) + "R";
+  if (n >= 1e24) return (n / 1e24).toFixed(3) + "Y";
+  if (n >= 1e21) return (n / 1e21).toFixed(3) + "Z";
+  if (n >= 1e18) return (n / 1e18).toFixed(3) + "E";
+  if (n >= 1e15) return (n / 1e15).toFixed(3) + "P";
+  if (n >= 1e12) return (n / 1e12).toFixed(3) + "T";
+  if (n >= 1e9) return (n / 1e9).toFixed(3) + "G";
+  if (n >= 1e6) return (n / 1e6).toFixed(3) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(3) + "k";
+  return Math.floor(n).toLocaleString();
+}
+
+// 単位が付くときは小数点第1位まで表示
+function formatNumberShort(num) {
+  const n = typeof num === 'bigint' ? Number(num) : num;
+  if (n >= 1e30) return (n / 1e30).toFixed(1) + "Q";
+  if (n >= 1e27) return (n / 1e27).toFixed(1) + "R";
+  if (n >= 1e24) return (n / 1e24).toFixed(1) + "Y";
+  if (n >= 1e21) return (n / 1e21).toFixed(1) + "Z";
+  if (n >= 1e18) return (n / 1e18).toFixed(1) + "E";
+  if (n >= 1e15) return (n / 1e15).toFixed(1) + "P";
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + "T";
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + "G";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "k";
+  return Math.floor(n).toLocaleString();
 }
 
 function formatMultiplier(num) {
+
+  if (num >= 1e18) return (num / 1e18).toFixed(2) + "E";
+  if (num >= 1e15) return (num / 1e15).toFixed(2) + "P";
   if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + "G";
   if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + "k";
   return num.toFixed(2);
 }
 
@@ -476,15 +572,512 @@ function getElementEnergyValue(element) {
   return element.atomicNumber * 10 * rowMultiplier;
 }
 
-function canAffordRecipe(recipe, count = 1) {
-  if (recipe.energy && gameState.energy < recipe.energy * count) return false;
-  if (recipe.protons && gameState.particles.protons < recipe.protons * count) return false;
-  if (recipe.electrons && gameState.particles.electrons < recipe.electrons * count) return false;
-  if (recipe.neutrons && gameState.particles.neutrons < recipe.neutrons * count) return false;
+// ===== Achievement System =====
+function generateAchievements() {
+  const achievements = [];
+  
+  // 元素ごとの実績（保有数1個、1mol）
+  ALL_ELEMENT_SYMBOLS.forEach(symbol => {
+    achievements.push({
+      id: `element_${symbol}_1`,
+      name: `Hold 1 unit of ${symbol}`,
+      description: `Hold at least 1 unit of ${symbol}`,
+      check: () => (gameState.elements[symbol] || 0n) >= 1n
+    });
+    achievements.push({
+      id: `element_${symbol}_mol`,
+      name: `Hold 1 mol of ${symbol}`,
+      description: `Hold at least 1 mol (6.02×10²³ units) of ${symbol}`,
+      check: () => (gameState.elements[symbol] || 0n) >= AVOGADRO
+    });
+  });
+  
+  // 周期ごとの実績
+  for (let period = 1; period <= 7; period++) {
+    const elements = PERIOD_ELEMENTS[period];
+    achievements.push({
+      id: `period_${period}_1`,
+      name: `Complete Period ${period}`,
+      description: `Hold at least 1 unit of all elements in Period ${period}`,
+      check: () => elements.every(s => (gameState.elements[s] || 0n) >= 1n)
+    });
+    achievements.push({
+      id: `period_${period}_mol`,
+      name: `Master Period ${period}`,
+      description: `Hold at least 1 mol of all elements in Period ${period}`,
+      check: () => elements.every(s => (gameState.elements[s] || 0n) >= AVOGADRO)
+    });
+  }
+  
+  // 族ごとの実績
+  for (let group = 1; group <= 18; group++) {
+    const elements = GROUP_ELEMENTS[group];
+    achievements.push({
+      id: `group_${group}_1`,
+      name: `Complete Group ${group}`,
+      description: `Hold at least 1 unit of all elements in Group ${group}`,
+      check: () => elements.every(s => (gameState.elements[s] || 0n) >= 1n)
+    });
+    achievements.push({
+      id: `group_${group}_mol`,
+      name: `Master Group ${group}`,
+      description: `Hold at least 1 mol of all elements in Group ${group}`,
+      check: () => elements.every(s => (gameState.elements[s] || 0n) >= AVOGADRO)
+    });
+  }
+  
+  // ランタノイド実績
+  achievements.push({
+    id: 'lanthanides_1',
+    name: 'Complete Lanthanides',
+    description: 'Hold at least 1 unit of all Lanthanides',
+    check: () => LANTHANIDES.every(s => (gameState.elements[s] || 0n) >= 1n)
+  });
+  achievements.push({
+    id: 'lanthanides_mol',
+    name: 'Master Lanthanides',
+    description: 'Hold at least 1 mol of all Lanthanides',
+    check: () => LANTHANIDES.every(s => (gameState.elements[s] || 0n) >= AVOGADRO)
+  });
+  
+  // アクチノイド実績
+  achievements.push({
+    id: 'actinides_1',
+    name: 'Complete Actinides',
+    description: 'Hold at least 1 unit of all Actinides',
+    check: () => ACTINIDES.every(s => (gameState.elements[s] || 0n) >= 1n)
+  });
+  achievements.push({
+    id: 'actinides_mol',
+    name: 'Master Actinides',
+    description: 'Hold at least 1 mol of all Actinides',
+    check: () => ACTINIDES.every(s => (gameState.elements[s] || 0n) >= AVOGADRO)
+  });
+  
+  // クリック数実績
+  const clickMilestones = [
+    { id: 'clicks_1k', name: '1,000 Clicks', value: 1e3 },
+    { id: 'clicks_1M', name: '1M Clicks', value: 1e6 },
+    { id: 'clicks_1G', name: '1G Clicks', value: 1e9 },
+    { id: 'clicks_1T', name: '1T Clicks', value: 1e12 },
+    { id: 'clicks_1P', name: '1P Clicks', value: 1e15 },
+    { id: 'clicks_1E', name: '1E Clicks', value: 1e18 },
+  ];
+  clickMilestones.forEach(m => {
+    achievements.push({
+      id: m.id,
+      name: m.name,
+      description: `Achieve a total of ${m.name} clicks`,
+      check: () => gameState.totalClicks >= m.value
+    });
+  });
+  
+  // プレイ時間実績
+  const timeMilestones = [
+    { id: 'time_1min', name: '1 Minute Play', ms: 60 * 1000 },
+    { id: 'time_1hour', name: '1 Hour Play', ms: 60 * 60 * 1000 },
+    { id: 'time_1day', name: '1 Day Play', ms: 24 * 60 * 60 * 1000 },
+    { id: 'time_1week', name: '1 Week Play', ms: 7 * 24 * 60 * 60 * 1000 },
+    { id: 'time_1month', name: '1 Month Play', ms: 30 * 24 * 60 * 60 * 1000 },
+    { id: 'time_1year', name: '1 Year Play', ms: 365 * 24 * 60 * 60 * 1000 },
+    { id: 'time_1century', name: '1 Century Play', ms: 100 * 365 * 24 * 60 * 60 * 1000 },
+    { id: 'time_1millennium', name: '1 Millennium Play', ms: 1000 * 365 * 24 * 60 * 60 * 1000 },
+  ];
+  timeMilestones.forEach(m => {
+    achievements.push({
+      id: m.id,
+      name: m.name,
+      description: `Achieve a total of ${m.name} play time`,
+      check: () => (Date.now() - gameState.startTime) >= m.ms
+    });
+  });
+  
+  // 粒子数実績（電子・陽子・中性子）
+  const particleMilestones = [
+    { suffix: '1k', name: '1k', value: 1000n },
+    { suffix: '1M', name: '1M', value: 1000000n },
+    { suffix: '1G', name: '1G', value: 1000000000n },
+    { suffix: '1T', name: '1T', value: 1000000000000n },
+    { suffix: '1P', name: '1P', value: 1000000000000000n },
+    { suffix: '1E', name: '1E', value: 1000000000000000000n },
+    { suffix: '1Z', name: '1Z', value: 1000000000000000000000n },
+    { suffix: '1Y', name: '1Y', value: 1000000000000000000000000n },
+  ];
+  
+  const particleTypes = [
+    { id: 'electrons', name: 'Electrons', key: 'electrons' },
+    { id: 'protons', name: 'Protons', key: 'protons' },
+    { id: 'neutrons', name: 'Neutrons', key: 'neutrons' },
+  ];
+  
+  particleTypes.forEach(particle => {
+    particleMilestones.forEach(m => {
+      achievements.push({
+        id: `${particle.id}_${m.suffix}`,
+        name: `${particle.name} ${m.name}`,
+        description: `Hold at least ${m.name} ${particle.name}`,
+        check: () => gameState.particles[particle.key] >= m.value
+      });
+    });
+  });
+  
+  return achievements;
+}
 
+let ACHIEVEMENTS = [];
+
+// 実績通知キューイングシステム
+const achievementNotificationQueue = [];
+let isShowingNotification = false;
+
+function queueAchievementNotification(achievement) {
+  achievementNotificationQueue.push(achievement);
+  processNotificationQueue();
+}
+
+function processNotificationQueue() {
+  // 表示中なら何もしない（表示完了後に再度呼ばれる）
+  if (isShowingNotification) return;
+  
+  // キューにエントリがあれば表示開始
+  if (achievementNotificationQueue.length > 0) {
+    const achievement = achievementNotificationQueue.shift();
+    showAchievementNotificationImmediate(achievement);
+  }
+}
+
+function showAchievementNotificationImmediate(achievement) {
+  isShowingNotification = true;
+  
+  const notification = document.createElement('div');
+  notification.className = 'achievement-notification';
+  notification.innerHTML = `
+    <div class="achievement-icon">🏆</div>
+    <div class="achievement-content">
+      <div class="achievement-title">Achievement Unlocked!</div>
+      <div class="achievement-name">${achievement.name}</div>
+    </div>
+  `;
+  document.body.appendChild(notification);
+  
+  // 表示アニメーション開始
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // 表示時間後に戻りアニメーション
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+      isShowingNotification = false;
+      // 次の通知を処理
+      processNotificationQueue();
+    }, 300);
+  }, 2000);
+}
+
+function checkAchievements() {
+  let newAchievements = [];
+  
+  ACHIEVEMENTS.forEach(achievement => {
+    if (!persistentState.achievements[achievement.id] && achievement.check()) {
+      // 実績取得時の詳細情報を記録
+      persistentState.achievements[achievement.id] = {
+        timestamp: Date.now(),
+        clicks: gameState.totalClicks,
+        playTime: Date.now() - gameState.startTime
+      };
+      newAchievements.push(achievement);
+    }
+  });
+  
+  if (newAchievements.length > 0) {
+    savePersistentData();
+    newAchievements.forEach(a => queueAchievementNotification(a));
+  }
+  
+  return newAchievements;
+}
+
+function getAchievementCount() {
+  return Object.keys(persistentState.achievements).length;
+}
+
+function getTotalAchievementCount() {
+  return ACHIEVEMENTS.length;
+}
+
+function getAchievementBonus() {
+  // 実績1個 = 100% ボーナス（つまり 1 + 実績数）
+  return 1 + getAchievementCount();
+}
+
+function updateAchievementModal() {
+  document.getElementById('achievementModalCount').textContent = `${getAchievementCount()}/${getTotalAchievementCount()}`;
+  document.getElementById('achievementModalBonus').textContent = `x${getAchievementBonus()}`;
+  renderAchievementList('elements');
+  
+  // タブをリセット
+  document.querySelectorAll('.achievement-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.achievement-tab[data-tab="elements"]').classList.add('active');
+}
+
+function renderAchievementList(tab) {
+  const container = document.getElementById('achievementListContainer');
+  let html = '';
+  
+  if (tab === 'elements') {
+    // 元素ごとの実績（1個保有）
+    html += '<div class="achievement-category"><div class="achievement-category-title">Element 1 retained</div>';
+    ALL_ELEMENT_SYMBOLS.forEach(symbol => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `element_${symbol}_1`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    });
+    html += '</div>';
+    
+    // 元素ごとの実績（1mol保有）
+    html += '<div class="achievement-category"><div class="achievement-category-title">Element 1mol retained</div>';
+    ALL_ELEMENT_SYMBOLS.forEach(symbol => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `element_${symbol}_mol`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    });
+    html += '</div>';
+  } else if (tab === 'periods') {
+    // Period Complete
+    html += '<div class="achievement-category"><div class="achievement-category-title">Period Complete (1 or more)</div>';
+    for (let i = 1; i <= 7; i++) {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `period_${i}_1`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    }
+    html += '</div>';
+    
+    // Period Master
+    html += '<div class="achievement-category"><div class="achievement-category-title">Period Master (1mol or more)</div>';
+    for (let i = 1; i <= 7; i++) {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `period_${i}_mol`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    }
+    html += '</div>';
+  } else if (tab === 'groups') {
+    // Group Complete
+    html += '<div class="achievement-category"><div class="achievement-category-title">Group Complete (1 or more)</div>';
+    for (let i = 1; i <= 18; i++) {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `group_${i}_1`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    }
+    html += '</div>';
+    
+    // Group Master
+    html += '<div class="achievement-category"><div class="achievement-category-title">Group Master (1mol or more)</div>';
+    for (let i = 1; i <= 18; i++) {
+      const achievement = ACHIEVEMENTS.find(a => a.id === `group_${i}_mol`);
+      const unlocked = persistentState.achievements[achievement.id];
+      html += renderAchievementItem(achievement, unlocked);
+    }
+    html += '</div>';
+  } else if (tab === 'special') {
+    // Lanthanides
+    html += '<div class="achievement-category"><div class="achievement-category-title">Lanthanides</div>';
+    const lanthanide1 = ACHIEVEMENTS.find(a => a.id === 'lanthanides_1');
+    const lanthanideMol = ACHIEVEMENTS.find(a => a.id === 'lanthanides_mol');
+    html += renderAchievementItem(lanthanide1, persistentState.achievements[lanthanide1.id]);
+    html += renderAchievementItem(lanthanideMol, persistentState.achievements[lanthanideMol.id]);
+    html += '</div>';
+    
+    // Actinides
+    html += '<div class="achievement-category"><div class="achievement-category-title">Actinides</div>';
+    const actinide1 = ACHIEVEMENTS.find(a => a.id === 'actinides_1');
+    const actinideMol = ACHIEVEMENTS.find(a => a.id === 'actinides_mol');
+    html += renderAchievementItem(actinide1, persistentState.achievements[actinide1.id]);
+    html += renderAchievementItem(actinideMol, persistentState.achievements[actinideMol.id]);
+    html += '</div>';
+    
+    // Clicks
+    html += '<div class="achievement-category"><div class="achievement-category-title">Clicks</div>';
+    const clickIds = ['clicks_1k', 'clicks_1M', 'clicks_1G', 'clicks_1T', 'clicks_1P', 'clicks_1E'];
+    clickIds.forEach(id => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        html += renderAchievementItem(achievement, persistentState.achievements[achievement.id]);
+      }
+    });
+    html += '</div>';
+    
+    // Play Time
+    html += '<div class="achievement-category"><div class="achievement-category-title">Play Time</div>';
+    const timeIds = ['time_1min', 'time_1hour', 'time_1day', 'time_1week', 'time_1month', 'time_1year', 'time_1century', 'time_1millennium'];
+    timeIds.forEach(id => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        html += renderAchievementItem(achievement, persistentState.achievements[achievement.id]);
+      }
+    });
+    html += '</div>';
+    
+    // Electrons
+    html += '<div class="achievement-category"><div class="achievement-category-title">Electrons Retained</div>';
+    const electronIds = ['electrons_1k', 'electrons_1M', 'electrons_1G', 'electrons_1T', 'electrons_1P', 'electrons_1E', 'electrons_1Z', 'electrons_1Y'];
+    electronIds.forEach(id => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        html += renderAchievementItem(achievement, persistentState.achievements[achievement.id]);
+      }
+    });
+    html += '</div>';
+    
+    // Protons
+    html += '<div class="achievement-category"><div class="achievement-category-title">Protons Retained</div>';
+    const protonIds = ['protons_1k', 'protons_1M', 'protons_1G', 'protons_1T', 'protons_1P', 'protons_1E', 'protons_1Z', 'protons_1Y'];
+    protonIds.forEach(id => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        html += renderAchievementItem(achievement, persistentState.achievements[achievement.id]);
+      }
+    });
+    html += '</div>';
+    
+    // Neutrons
+    html += '<div class="achievement-category"><div class="achievement-category-title">Neutrons Retained</div>';
+    const neutronIds = ['neutrons_1k', 'neutrons_1M', 'neutrons_1G', 'neutrons_1T', 'neutrons_1P', 'neutrons_1E', 'neutrons_1Z', 'neutrons_1Y'];
+    neutronIds.forEach(id => {
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        html += renderAchievementItem(achievement, persistentState.achievements[achievement.id]);
+      }
+    });
+    html += '</div>';
+  }
+  
+  container.innerHTML = html;
+}
+
+function renderAchievementItem(achievement, unlocked) {
+  const statusClass = unlocked ? 'unlocked' : 'locked';
+  const icon = unlocked ? '🏆' : '🔒';
+  const status = unlocked ? 'Unlocked' : 'Locked';
+  const clickable = unlocked ? 'onclick="showAchievementDetail(\'' + achievement.id + '\')"' : '';
+  const cursorStyle = unlocked ? 'style="cursor: pointer;"' : '';
+  
+  return `
+    <div class="achievement-item ${statusClass}" ${clickable} ${cursorStyle}>
+      <div class="achievement-item-icon">${icon}</div>
+      <div class="achievement-item-info">
+        <div class="achievement-item-name">${achievement.name}</div>
+        <div class="achievement-item-desc">${achievement.description}</div>
+      </div>
+      <div class="achievement-item-status">${status}</div>
+    </div>
+  `;
+}
+
+// 実績詳細表示
+function showAchievementDetail(achievementId) {
+  const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
+  const data = persistentState.achievements[achievementId];
+  if (!achievement || !data) return;
+  
+  // 古い形式（タイムスタンプのみ）への対応
+  let timestamp, clicks, playTime;
+  if (typeof data === 'object') {
+    timestamp = data.timestamp;
+    clicks = data.clicks;
+    playTime = data.playTime;
+  } else {
+    // 古い形式: dataはタイムスタンプの数値
+    timestamp = data;
+    clicks = '不明';
+    playTime = null;
+  }
+  
+  const dateStr = new Date(timestamp).toLocaleString('en-US');
+  const clicksStr = typeof clicks === 'number' ? formatNumber(clicks) + ' clicks' : clicks;
+  const playTimeStr = playTime !== null ? formatTime(playTime) : 'Unknown';
+  
+  // 詳細モーダルを表示
+  const modal = document.getElementById('achievementDetailModal');
+  document.getElementById('achievementDetailName').textContent = achievement.name;
+  document.getElementById('achievementDetailDesc').textContent = achievement.description;
+  document.getElementById('achievementDetailDate').textContent = dateStr;
+  document.getElementById('achievementDetailClicks').textContent = clicksStr;
+  document.getElementById('achievementDetailPlayTime').textContent = playTimeStr;
+  modal.style.display = 'flex';
+}
+
+// 原料元素から得られる粒子数を計算
+function calculateParticlesFromElements(recipe, count = 1) {
+  let electrons = 0n;
+  let protons = 0n;
+  let neutrons = 0n;
+  const countBig = BigInt(count);
+  
+  for (const [key, amount] of Object.entries(recipe)) {
+    if (key !== 'energy' && key !== 'protons' && key !== 'electrons' && key !== 'neutrons') {
+      // これは元素シンボル
+      const element = ELEMENTS.find(e => e.symbol === key);
+      if (element) {
+        const amountBig = BigInt(amount);
+        // 元素の原子番号 = 電子数 = 陽子数
+        electrons += BigInt(element.atomicNumber) * amountBig * countBig;
+        protons += BigInt(element.atomicNumber) * amountBig * countBig;
+        // 元素の中性子数はレシピから取得
+        neutrons += BigInt(element.recipe.neutrons) * amountBig * countBig;
+      }
+    }
+  }
+  
+  return { electrons, protons, neutrons };
+}
+
+// 必要な追加中性子数を計算
+function calculateRequiredNeutrons(recipe, count = 1) {
+  const fromElements = calculateParticlesFromElements(recipe, count);
+  const requiredNeutrons = BigInt(recipe.neutrons || 0) * BigInt(count);
+  const additionalNeutrons = bigIntMax(0n, requiredNeutrons - fromElements.neutrons);
+  return additionalNeutrons;
+}
+
+function canAffordRecipe(recipe, count = 1) {
+  const countBig = BigInt(count);
+  const energyCost = BigInt(recipe.energy || 0) * BigInt(ENERGY_COST_MULTIPLIER);
+  if (energyCost > 0n && gameState.energy < energyCost * countBig) return false;
+  
+  // 原料元素から得られる粒子を計算
+  const fromElements = calculateParticlesFromElements(recipe, count);
+  
+  // 必要な粒子数
+  const requiredElectrons = BigInt(recipe.electrons || 0) * countBig;
+  const requiredProtons = BigInt(recipe.protons || 0) * countBig;
+  const requiredNeutrons = BigInt(recipe.neutrons || 0) * countBig;
+  
+  // 原料元素がない場合（水素）は、電子と陽子を直接消費
+  const hasSourceElements = Object.keys(recipe).some(key => 
+    key !== 'energy' && key !== 'protons' && key !== 'electrons' && key !== 'neutrons'
+  );
+  
+  if (!hasSourceElements) {
+    // 水素生成: 電子と陽子を直接消費
+    if (requiredElectrons > 0n && gameState.particles.electrons < requiredElectrons) return false;
+    if (requiredProtons > 0n && gameState.particles.protons < requiredProtons) return false;
+    if (requiredNeutrons > 0n && gameState.particles.neutrons < requiredNeutrons) return false;
+  } else {
+    // 原料元素から足りない分だけ粒子が必要
+    // 電子と陽子は原料元素から完全に供給される前提（レシピが正しければ過不足なし）
+    // 中性子のみ不足分を消費
+    const additionalNeutrons = bigIntMax(0n, requiredNeutrons - fromElements.neutrons);
+    
+    if (additionalNeutrons > 0n && gameState.particles.neutrons < additionalNeutrons) return false;
+  }
+
+  // 原料元素のチェック
   for (const [element, amount] of Object.entries(recipe)) {
     if (element !== 'energy' && element !== 'protons' && element !== 'electrons' && element !== 'neutrons') {
-      if ((gameState.elements[element] || 0) < amount * count) return false;
+      if ((gameState.elements[element] || 0n) < BigInt(amount) * countBig) return false;
     }
   }
 
@@ -492,49 +1085,145 @@ function canAffordRecipe(recipe, count = 1) {
 }
 
 function getMaxAffordable(recipe) {
-  let max = Infinity;
+  let max = BigInt(Number.MAX_SAFE_INTEGER); // 十分大きな値
 
-  if (recipe.energy) max = Math.min(max, Math.floor(gameState.energy / recipe.energy));
-  if (recipe.protons) max = Math.min(max, Math.floor(gameState.particles.protons / recipe.protons));
-  if (recipe.electrons) max = Math.min(max, Math.floor(gameState.particles.electrons / recipe.electrons));
-  if (recipe.neutrons) max = Math.min(max, Math.floor(gameState.particles.neutrons / recipe.neutrons));
-
-  for (const [element, amount] of Object.entries(recipe)) {
-    if (element !== 'energy' && element !== 'protons' && element !== 'electrons' && element !== 'neutrons') {
-      max = Math.min(max, Math.floor((gameState.elements[element] || 0) / amount));
+  const energyCost = BigInt(recipe.energy || 0) * BigInt(ENERGY_COST_MULTIPLIER);
+  if (energyCost > 0n) max = bigIntMin(max, gameState.energy / energyCost);
+  
+  // 原料元素がない場合（水素）は、電子と陽子を直接消費
+  const hasSourceElements = Object.keys(recipe).some(key => 
+    key !== 'energy' && key !== 'protons' && key !== 'electrons' && key !== 'neutrons'
+  );
+  
+  if (!hasSourceElements) {
+    // 水素生成: 電子、陽子、中性子を直接チェック
+    if (recipe.electrons) max = bigIntMin(max, gameState.particles.electrons / BigInt(recipe.electrons));
+    if (recipe.protons) max = bigIntMin(max, gameState.particles.protons / BigInt(recipe.protons));
+    if (recipe.neutrons) max = bigIntMin(max, gameState.particles.neutrons / BigInt(recipe.neutrons));
+  } else {
+    // 1個あたりの追加中性子数を計算
+    const additionalNeutronsPerOne = calculateRequiredNeutrons(recipe, 1);
+    if (additionalNeutronsPerOne > 0n) {
+      max = bigIntMin(max, gameState.particles.neutrons / additionalNeutronsPerOne);
     }
   }
 
-  return max === Infinity ? 0 : max;
-}
-
-function consumeRecipe(recipe, count = 1) {
-  if (recipe.energy) gameState.energy -= recipe.energy * count;
-  if (recipe.protons) gameState.particles.protons -= recipe.protons * count;
-  if (recipe.electrons) gameState.particles.electrons -= recipe.electrons * count;
-  if (recipe.neutrons) gameState.particles.neutrons -= recipe.neutrons * count;
-
   for (const [element, amount] of Object.entries(recipe)) {
     if (element !== 'energy' && element !== 'protons' && element !== 'electrons' && element !== 'neutrons') {
-      gameState.elements[element] = (gameState.elements[element] || 0) - amount * count;
+      max = bigIntMin(max, (gameState.elements[element] || 0n) / BigInt(amount));
+    }
+  }
+
+  return max === BigInt(Number.MAX_SAFE_INTEGER) ? 0n : max;
+}
+
+function consumeRecipe(recipe, count = 1, targetElement = null) {
+  const countBig = BigInt(count);
+  const energyCost = BigInt(recipe.energy || 0) * BigInt(ENERGY_COST_MULTIPLIER);
+  if (energyCost > 0n) gameState.energy -= energyCost * countBig;
+  
+  // 原料元素がない場合（水素）は、電子と陽子を直接消費
+  const hasSourceElements = Object.keys(recipe).some(key => 
+    key !== 'energy' && key !== 'protons' && key !== 'electrons' && key !== 'neutrons'
+  );
+  
+  if (!hasSourceElements) {
+    // 水素生成: 電子、陽子、中性子を直接消費
+    if (recipe.electrons) gameState.particles.electrons -= BigInt(recipe.electrons) * countBig;
+    if (recipe.protons) gameState.particles.protons -= BigInt(recipe.protons) * countBig;
+    if (recipe.neutrons) gameState.particles.neutrons -= BigInt(recipe.neutrons) * countBig;
+  } else {
+    // 原料元素から得られる粒子を計算
+    const fromElements = calculateParticlesFromElements(recipe, count);
+    
+    // ターゲット元素が必要とする粒子数
+    let requiredElectrons = 0n;
+    let requiredProtons = 0n;
+    let requiredNeutrons = 0n;
+    
+    if (targetElement) {
+      requiredElectrons = BigInt(targetElement.atomicNumber) * countBig;
+      requiredProtons = BigInt(targetElement.atomicNumber) * countBig;
+      requiredNeutrons = BigInt(targetElement.recipe.neutrons) * countBig;
+    }
+    
+    // 足りない中性子のみ消費
+    const additionalNeutrons = bigIntMax(0n, requiredNeutrons - fromElements.neutrons);
+    if (additionalNeutrons > 0n) {
+      gameState.particles.neutrons -= additionalNeutrons;
+    }
+    
+    // 余った粒子を返却
+    const excessElectrons = fromElements.electrons - requiredElectrons;
+    const excessProtons = fromElements.protons - requiredProtons;
+    const excessNeutrons = fromElements.neutrons - requiredNeutrons;
+    
+    if (excessElectrons > 0n) gameState.particles.electrons += excessElectrons;
+    if (excessProtons > 0n) gameState.particles.protons += excessProtons;
+    if (excessNeutrons > 0n) gameState.particles.neutrons += excessNeutrons;
+  }
+
+  // 原料元素を消費
+  for (const [element, amount] of Object.entries(recipe)) {
+    if (element !== 'energy' && element !== 'protons' && element !== 'electrons' && element !== 'neutrons') {
+      gameState.elements[element] = (gameState.elements[element] || 0n) - BigInt(amount) * countBig;
+      // 元素減少エフェクト
+      triggerElementChangeEffect(element, 'decrease');
     }
   }
 }
 
 function calculateClickPower() {
-  let power = 0;
+  let power = 0n;
   for (const [symbol, count] of Object.entries(gameState.elements)) {
     const element = ELEMENTS.find(e => e.symbol === symbol);
     if (element) {
-      power += element.atomicNumber * count;
+      power += BigInt(element.atomicNumber) * toBigInt(count);
     }
   }
-  return Math.max(1, power);
+  return bigIntMax(1n, power);
+}
+
+// ===== Element Change Effect =====
+function triggerElementChangeEffect(symbol, type) {
+  const card = document.getElementById(`element-${symbol}`);
+  if (!card) return;
+  
+  const ownedEl = card.querySelector('.element-owned');
+  if (!ownedEl) return;
+  
+  // 既存のクラスを削除してリセット
+  ownedEl.classList.remove('increase', 'decrease');
+  
+  // アニメーションをリスタートするために一度再描画
+  void ownedEl.offsetWidth;
+  
+  // 新しいクラスを追加
+  ownedEl.classList.add(type);
+  
+  // アニメーション終了後にクラスを削除
+  setTimeout(() => {
+    ownedEl.classList.remove(type);
+  }, 500);
+  
+  // 発光エフェクトを作成
+  const rect = ownedEl.getBoundingClientRect();
+  const glow = document.createElement('div');
+  glow.className = `element-glow ${type}`;
+  glow.style.left = (rect.left + rect.width / 2 - 15) + 'px';
+  glow.style.top = (rect.top + rect.height / 2 - 15) + 'px';
+  glow.style.width = '30px';
+  glow.style.height = '30px';
+  glow.style.position = 'fixed';
+  document.body.appendChild(glow);
+  
+  // アニメーション終了後に削除
+  setTimeout(() => glow.remove(), 800);
 }
 
 // ===== Click Handler =====
 function handleClick(event) {
-  const clickPower = calculateClickPower();
+  const clickPower = calculateClickPower() * BigInt(getAchievementBonus());
   gameState.energy += clickPower;
   gameState.totalEnergyEarned += clickPower;
   gameState.totalClicks += 1;
@@ -558,7 +1247,7 @@ function handleClick(event) {
   // Number pop animation
   const numberPop = document.createElement('div');
   numberPop.className = 'number-pop';
-  numberPop.textContent = '+' + formatNumber(clickPower);
+  numberPop.textContent = '+' + formatNumberShort(clickPower);
   numberPop.style.left = x + 'px';
   numberPop.style.top = y + 'px';
   button.appendChild(numberPop);
@@ -572,8 +1261,9 @@ function handleClick(event) {
 function upgradeGenerator(type) {
   const cost = getGeneratorCost(type);
 
-  if (gameState.energy >= cost) {
-    gameState.energy -= cost;
+  const costBig = BigInt(cost);
+  if (gameState.energy >= costBig) {
+    gameState.energy -= costBig;
     gameState.generators[type] += 1;
     gameState.totalClicks += 1; // Track click
     updateUI();
@@ -583,50 +1273,81 @@ function upgradeGenerator(type) {
 // ===== Element Handlers =====
 function synthesizeElement(symbol) {
   const element = ELEMENTS.find(e => e.symbol === symbol);
-  let countToBuy = 0;
+  let countToBuy = 0n;
 
   if (gameState.buyMultiplier === 'max') {
     countToBuy = getMaxAffordable(element.recipe);
   } else {
-    countToBuy = gameState.buyMultiplier;
+    countToBuy = BigInt(gameState.buyMultiplier);
   }
 
-  if (countToBuy > 0 && canAffordRecipe(element.recipe, countToBuy)) {
-    consumeRecipe(element.recipe, countToBuy);
-    gameState.elements[symbol] = (gameState.elements[symbol] || 0) + countToBuy;
+  if (countToBuy > 0n && canAffordRecipe(element.recipe, toNumber(countToBuy))) {
+    consumeRecipe(element.recipe, toNumber(countToBuy), element);
+    gameState.elements[symbol] = (gameState.elements[symbol] || 0n) + countToBuy;
     gameState.totalClicks += 1; // Track click
+    
+    // 元素増加エフェクト
+    triggerElementChangeEffect(symbol, 'increase');
+    
     updateUI();
   }
 }
 
 // ===== Game Loop =====
+// 小数の蓄積用（BigIntは小数を扱えないため）
+const particleAccumulator = { electrons: 0, protons: 0, neutrons: 0 };
+let energyAccumulator = 0;
+
 function gameLoop() {
   const now = Date.now();
   const deltaTime = (now - gameState.lastUpdate) / 1000; // seconds
   gameState.lastUpdate = now;
+  
+  const achievementBonus = getAchievementBonus();
 
-  // Generate particles
+  // Generate particles (小数を蓄積し、1以上になったらBigIntに変換)
   for (const [type, level] of Object.entries(gameState.generators)) {
     const rate = getGeneratorRate(type);
-    gameState.particles[type] += rate * deltaTime;
+    particleAccumulator[type] += rate * deltaTime;
+    if (particleAccumulator[type] >= 1) {
+      const toAdd = BigInt(Math.floor(particleAccumulator[type]));
+      gameState.particles[type] += toAdd;
+      particleAccumulator[type] -= Number(toAdd);
+    }
   }
 
-  // Generate energy from particles
-  const totalParticles = gameState.particles.electrons + gameState.particles.protons + gameState.particles.neutrons;
-  const particleEnergy = totalParticles * PARTICLE_ENERGY_RATE * deltaTime;
-  gameState.energy += particleEnergy;
-  gameState.totalEnergyEarned += particleEnergy;
+  // Generate energy from particles (実績ボーナス適用)
+  const totalParticles = toNumber(gameState.particles.electrons + gameState.particles.protons + gameState.particles.neutrons);
+  const particleEnergy = totalParticles * PARTICLE_ENERGY_RATE * deltaTime * achievementBonus;
+  energyAccumulator += particleEnergy;
+  
+  // Generate energy from particle count (count / 60 per second)
+  const electronCount = toNumber(gameState.particles.electrons);
+  const protonCount = toNumber(gameState.particles.protons);
+  const neutronCount = toNumber(gameState.particles.neutrons);
+  const particleCountEnergy = (electronCount + protonCount + neutronCount) * PARTICLE_COUNT_ENERGY_RATE * deltaTime * achievementBonus;
+  energyAccumulator += particleCountEnergy;
 
-  // Generate energy from elements
+  // Generate energy from elements (実績ボーナス適用)
   for (const [symbol, count] of Object.entries(gameState.elements)) {
     const element = ELEMENTS.find(e => e.symbol === symbol);
     if (element) {
       const energyValue = getElementEnergyValue(element);
-      const elementEnergy = count * energyValue * 0.05 * deltaTime;
-      gameState.energy += elementEnergy;
-      gameState.totalEnergyEarned += elementEnergy;
+      const elementEnergy = toNumber(count) * energyValue * 0.05 * deltaTime * achievementBonus;
+      energyAccumulator += elementEnergy;
     }
   }
+  
+  // 蓄積したエネルギーを1以上になったらBigIntに変換
+  if (energyAccumulator >= 1) {
+    const toAdd = BigInt(Math.floor(energyAccumulator));
+    gameState.energy += toAdd;
+    gameState.totalEnergyEarned += toAdd;
+    energyAccumulator -= Number(toAdd);
+  }
+  
+  // 実績チェック
+  checkAchievements();
 
   updateUI();
   requestAnimationFrame(gameLoop);
@@ -637,15 +1358,18 @@ function updateUI() {
   // Energy display
   document.getElementById('energyValue').textContent = formatNumber(gameState.energy);
 
-  // Energy rate
-  const totalParticles = gameState.particles.electrons + gameState.particles.protons + gameState.particles.neutrons;
-  let energyRate = totalParticles * PARTICLE_ENERGY_RATE;
+  // Energy rate (実績ボーナス適用)
+  const achievementBonus = getAchievementBonus();
+  const totalParticles = toNumber(gameState.particles.electrons + gameState.particles.protons + gameState.particles.neutrons);
+  let energyRate = totalParticles * PARTICLE_ENERGY_RATE * achievementBonus;
+  // Add energy from particle count (表示上は粒子数そのまま = count/sec)
+  energyRate += totalParticles * achievementBonus;
 
   for (const [symbol, count] of Object.entries(gameState.elements)) {
     const element = ELEMENTS.find(e => e.symbol === symbol);
     if (element) {
       const energyValue = getElementEnergyValue(element);
-      energyRate += count * energyValue * 0.05;
+      energyRate += toNumber(count) * energyValue * 0.05 * achievementBonus;
     }
   }
 
@@ -653,6 +1377,12 @@ function updateUI() {
 
   // Multiplier display
   document.getElementById('multiplierValue').textContent = formatMultiplier(gameState.multiplier);
+  
+  // Achievement display
+  const achievementCountEl = document.getElementById('achievementCount');
+  if (achievementCountEl) {
+    achievementCountEl.textContent = `${getAchievementCount()}/${getTotalAchievementCount()}`;
+  }
 
   // Stats
   document.getElementById('totalClicks').textContent = formatNumber(gameState.totalClicks);
@@ -699,23 +1429,23 @@ function updateElementsUI() {
   ELEMENTS.forEach(element => {
     const card = document.getElementById(`element-${element.symbol}`);
     if (card) {
-      const count = gameState.elements[element.symbol] || 0;
+      const count = gameState.elements[element.symbol] || 0n;
 
       let canAfford = false;
       if (gameState.buyMultiplier === 'max') {
-        canAfford = getMaxAffordable(element.recipe) > 0;
+        canAfford = getMaxAffordable(element.recipe) > 0n;
       } else {
         canAfford = canAffordRecipe(element.recipe, gameState.buyMultiplier);
       }
 
-      card.classList.toggle('locked', !canAfford && count === 0);
+      card.classList.toggle('locked', !canAfford && count === 0n);
       // Also toggle a 'disabled' class for visual feedback even if owned
       card.classList.toggle('disabled', !canAfford);
 
       const ownedEl = card.querySelector('.element-owned');
       if (ownedEl) {
-        ownedEl.textContent = count > 0 ? formatNumber(count) : '';
-        ownedEl.style.display = count > 0 ? 'flex' : 'none';
+        ownedEl.textContent = count > 0n ? formatNumberShort(count) : '';
+        ownedEl.style.display = count > 0n ? 'flex' : 'none';
       }
     }
   });
@@ -744,15 +1474,22 @@ function createElementCard(element) {
   // Click to synthesize
   card.addEventListener('click', () => {
     synthesizeElement(element.symbol);
+    hideElementTooltip();
+    lastClickedElement = element.symbol;
   });
 
   // Hover tooltip
   card.addEventListener('mouseenter', () => {
-    showElementTooltip(card, element);
+    // クリックした元素と同じならツールチップを表示しない
+    if (lastClickedElement !== element.symbol) {
+      showElementTooltip(card, element);
+    }
   });
 
   card.addEventListener('mouseleave', () => {
     hideElementTooltip();
+    // 他の元素に移動したらリセット
+    lastClickedElement = null;
   });
 
   return card;
@@ -760,6 +1497,7 @@ function createElementCard(element) {
 
 // ===== Tooltip Functions =====
 let currentTooltip = null;
+let lastClickedElement = null;
 
 function showElementTooltip(card, element) {
   // Remove existing tooltip
@@ -777,10 +1515,11 @@ function showElementTooltip(card, element) {
 
   // Energy
   if (recipe.energy) {
-    const hasEnough = gameState.energy >= recipe.energy;
+    const energyCost = recipe.energy * ENERGY_COST_MULTIPLIER;
+    const hasEnough = gameState.energy >= energyCost;
     recipeHTML += `<div class="recipe-item ${hasEnough ? 'available' : 'unavailable'}">`;
     recipeHTML += `<span class="recipe-label text-energy">Energy:</span>`;
-    recipeHTML += `<span class="recipe-value text-energy">${formatNumber(recipe.energy)}</span>`;
+    recipeHTML += `<span class="recipe-value text-energy">${formatNumber(energyCost)}</span>`;
     recipeHTML += '</div>';
   }
 
@@ -812,7 +1551,7 @@ function showElementTooltip(card, element) {
   // Other elements
   for (const [key, value] of Object.entries(recipe)) {
     if (key !== 'energy' && key !== 'protons' && key !== 'electrons' && key !== 'neutrons') {
-      const hasEnough = (gameState.elements[key] || 0) >= value;
+      const hasEnough = (gameState.elements[key] || 0n) >= BigInt(value);
       const elementData = ELEMENTS.find(e => e.symbol === key);
       recipeHTML += `<div class="recipe-item ${hasEnough ? 'available' : 'unavailable'}">`;
       recipeHTML += `<span class="recipe-label" style="color: ${elementData ? elementData.color : 'inherit'}">${elementData ? elementData.name : key}:</span>`;
@@ -825,7 +1564,7 @@ function showElementTooltip(card, element) {
 
   // Energy generation info
   const energyValue = getElementEnergyValue(element) * 0.05;
-  recipeHTML += `<div class="tooltip-info">Generation: ${formatNumber(energyValue)} e/sec.</div>`;
+  recipeHTML += `<div class="tooltip-info">Generation: ${energyValue.toFixed(1)} e/sec.</div>`;
 
   tooltip.innerHTML = recipeHTML;
 
@@ -855,8 +1594,27 @@ function hideElementTooltip() {
 }
 
 // ===== Save/Load =====
+// BigInt対応のJSONシリアライズ
+function stringifyWithBigInt(obj) {
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'bigint') {
+      return { __bigint__: value.toString() };
+    }
+    return value;
+  });
+}
+
+function parseWithBigInt(str) {
+  return JSON.parse(str, (key, value) => {
+    if (value && typeof value === 'object' && value.__bigint__) {
+      return BigInt(value.__bigint__);
+    }
+    return value;
+  });
+}
+
 function saveGame() {
-  localStorage.setItem('periodicTableGame', JSON.stringify(gameState));
+  localStorage.setItem('periodicTableGame', stringifyWithBigInt(gameState));
   savePersistentData();
 }
 
@@ -864,13 +1622,35 @@ function loadGame() {
   // 永続データを読み込み
   const savedPersistent = localStorage.getItem('periodicTablePersistent');
   if (savedPersistent) {
-    persistentState = JSON.parse(savedPersistent);
+    const loaded = parseWithBigInt(savedPersistent);
+    persistentState = {
+      totalEnergyEarned: toBigInt(loaded.totalEnergyEarned || 0),
+      totalClicks: loaded.totalClicks || 0,
+      totalPlayTime: loaded.totalPlayTime || 0,
+      achievements: loaded.achievements || {}
+    };
   }
 
   const saved = localStorage.getItem('periodicTableGame');
   if (saved) {
-    const loaded = JSON.parse(saved);
-    Object.assign(gameState, loaded);
+    const loaded = parseWithBigInt(saved);
+    // BigInt値の変換を確実に行う
+    gameState.energy = toBigInt(loaded.energy || 0);
+    gameState.particles = {
+      electrons: toBigInt(loaded.particles?.electrons || 0),
+      protons: toBigInt(loaded.particles?.protons || 0),
+      neutrons: toBigInt(loaded.particles?.neutrons || 0)
+    };
+    gameState.generators = loaded.generators || { electrons: 0, protons: 0, neutrons: 0 };
+    gameState.elements = {};
+    for (const [key, val] of Object.entries(loaded.elements || {})) {
+      gameState.elements[key] = toBigInt(val);
+    }
+    gameState.elementGenerators = loaded.elementGenerators || {};
+    gameState.totalClicks = loaded.totalClicks || 0;
+    gameState.startTime = loaded.startTime || Date.now();
+    gameState.totalEnergyEarned = toBigInt(loaded.totalEnergyEarned || 0);
+    gameState.multiplier = loaded.multiplier || 1;
     gameState.lastUpdate = Date.now();
   }
   
@@ -888,7 +1668,7 @@ function savePersistentData() {
   persistentState.totalEnergyEarned = gameState.totalEnergyEarned;
   persistentState.totalClicks = gameState.totalClicks;
   persistentState.totalPlayTime = Date.now() - gameState.startTime;
-  localStorage.setItem('periodicTablePersistent', JSON.stringify(persistentState));
+  localStorage.setItem('periodicTablePersistent', stringifyWithBigInt(persistentState));
 }
 
 // Auto-save every 10 seconds
@@ -898,6 +1678,9 @@ setInterval(saveGame, 10000);
 function init() {
   // ELEMENTSを生成
   ELEMENTS = generateElements();
+  
+  // 実績を生成
+  ACHIEVEMENTS = generateAchievements();
   
   loadGame();
 
@@ -915,7 +1698,7 @@ function init() {
 
   document.getElementById('resetButton').addEventListener('click', () => {
     // リセット後の倍率を計算して表示
-    const newMultiplier = calculateMultiplierFromEnergy(gameState.totalEnergyEarned);
+    const newMultiplier = calculateMultiplierFromEnergy(toNumber(gameState.totalEnergyEarned));
     document.getElementById('resetTotalEnergy').textContent = formatNumber(gameState.totalEnergyEarned);
     document.getElementById('resetNewMultiplier').textContent = formatMultiplier(newMultiplier);
     resetModal.classList.add('active');
@@ -927,7 +1710,7 @@ function init() {
 
   confirmResetBtn.addEventListener('click', () => {
     // 新しい倍率を計算
-    const newMultiplier = calculateMultiplierFromEnergy(gameState.totalEnergyEarned);
+    const newMultiplier = calculateMultiplierFromEnergy(toNumber(gameState.totalEnergyEarned));
     
     // 永続データを保存
     savePersistentData();
@@ -940,7 +1723,7 @@ function init() {
       multiplier: newMultiplier,
       totalEnergyEarned: gameState.totalEnergyEarned
     };
-    localStorage.setItem('periodicTableGame', JSON.stringify(newState));
+    localStorage.setItem('periodicTableGame', stringifyWithBigInt(newState));
     
     location.reload();
   });
@@ -950,6 +1733,50 @@ function init() {
     if (e.target === resetModal) {
       resetModal.classList.remove('active');
     }
+  });
+
+  // Achievement modal
+  const achievementModal = document.getElementById('achievementModal');
+  const achievementButton = document.getElementById('achievementButton');
+  const closeAchievementModal = document.getElementById('closeAchievementModal');
+  
+  achievementButton.addEventListener('click', () => {
+    updateAchievementModal();
+    achievementModal.classList.add('active');
+  });
+  
+  closeAchievementModal.addEventListener('click', () => {
+    achievementModal.classList.remove('active');
+  });
+  
+  achievementModal.addEventListener('click', (e) => {
+    if (e.target === achievementModal) {
+      achievementModal.classList.remove('active');
+    }
+  });
+  
+  // Achievement detail modal
+  const achievementDetailModal = document.getElementById('achievementDetailModal');
+  const closeAchievementDetailModal = document.getElementById('closeAchievementDetailModal');
+  
+  closeAchievementDetailModal.addEventListener('click', () => {
+    achievementDetailModal.style.display = 'none';
+  });
+  
+  achievementDetailModal.addEventListener('click', (e) => {
+    if (e.target === achievementDetailModal) {
+      achievementDetailModal.style.display = 'none';
+    }
+  });
+  
+  // Achievement tabs
+  const achievementTabs = document.querySelectorAll('.achievement-tab');
+  achievementTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      achievementTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderAchievementList(tab.dataset.tab);
+    });
   });
 
   // Bulk controls

@@ -156,6 +156,10 @@
                                 <span class="stat-label">Play Time</span>
                                 <span class="stat-value" id="playTime">0:00</span>
                             </div>
+                            <button class="achievement-button stat-item" id="achievementButton">
+                                <span class="stat-label">Achievements</span>
+                                <span class="stat-value" id="achievementCount">0/0</span>
+                            </button>
                         </div>
                         <button class="reset-button" id="resetButton">
                             <span class="reset-icon">🔄</span>
@@ -175,6 +179,8 @@
                             <button class="bulk-btn active" data-multiplier="1">x1</button>
                             <button class="bulk-btn" data-multiplier="10">x10</button>
                             <button class="bulk-btn" data-multiplier="100">x100</button>
+                            <button class="bulk-btn" data-multiplier="1000">x1k</button>
+                            <button class="bulk-btn" data-multiplier="1000000">x1M</button>
                             <button class="bulk-btn" data-multiplier="max">MAX</button>
                         </div>
                     </div>
@@ -204,6 +210,59 @@
             <div class="modal-actions">
                 <button class="modal-button cancel" id="cancelReset">Cancel</button>
                 <button class="modal-button confirm" id="confirmReset">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement List Modal -->
+    <div class="modal-overlay" id="achievementModal">
+        <div class="modal-content achievement-modal">
+            <div class="achievement-modal-header">
+                <h3 class="modal-title">🏆 Achievements</h3>
+                <div class="achievement-summary">
+                    <span id="achievementModalCount">0/0</span>
+                    <span class="achievement-modal-bonus">Bonus: <span id="achievementModalBonus">x1</span></span>
+                </div>
+            </div>
+            <div class="achievement-tabs">
+                <button class="achievement-tab active" data-tab="elements">Elements</button>
+                <button class="achievement-tab" data-tab="periods">Periods</button>
+                <button class="achievement-tab" data-tab="groups">Groups</button>
+                <button class="achievement-tab" data-tab="special">Special</button>
+            </div>
+            <div class="achievement-list-container" id="achievementListContainer">
+                <!-- Achievement list will be generated here -->
+            </div>
+            <div class="modal-actions">
+                <button class="modal-button cancel" id="closeAchievementModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Detail Modal -->
+    <div class="modal" id="achievementDetailModal">
+        <div class="modal-content achievement-detail-modal">
+            <h2 class="modal-title">🏆 Achievement Details</h2>
+            <div class="achievement-detail-content">
+                <div class="achievement-detail-name" id="achievementDetailName"></div>
+                <div class="achievement-detail-desc" id="achievementDetailDesc"></div>
+                <div class="achievement-detail-stats">
+                    <div class="achievement-detail-row">
+                        <span class="achievement-detail-label">📅 Obtained Date:</span>
+                        <span class="achievement-detail-value" id="achievementDetailDate"></span>
+                    </div>
+                    <div class="achievement-detail-row">
+                        <span class="achievement-detail-label">🖱️ Clicks at Obtained:</span>
+                        <span class="achievement-detail-value" id="achievementDetailClicks"></span>
+                    </div>
+                    <div class="achievement-detail-row">
+                        <span class="achievement-detail-label">⏱️ Play Time at Obtained:</span>
+                        <span class="achievement-detail-value" id="achievementDetailPlayTime"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-button cancel" id="closeAchievementDetailModal">Close</button>
             </div>
         </div>
     </div>
