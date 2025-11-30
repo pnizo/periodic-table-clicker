@@ -1,3 +1,16 @@
+// ===== App Version =====
+const APP_VERSION = '1.0.1';
+
+// データ互換性用バージョン（メジャー.マイナーのみ、パッチバージョンは除外）
+function getDataVersion(version) {
+  const parts = version.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(0, 2).join('.');
+  }
+  return version;
+}
+const DATA_VERSION = getDataVersion(APP_VERSION);
+
 // ===== Game State =====
 const gameState = {
   energy: 0n,
@@ -1631,13 +1644,33 @@ function parseWithBigInt(str) {
 }
 
 function saveGame() {
-  localStorage.setItem('periodicTableGame', stringifyWithBigInt(gameState));
+  const saveData = {
+    ...gameState,
+    version: DATA_VERSION
+  };
+  localStorage.setItem('periodicTableGame', stringifyWithBigInt(saveData));
   savePersistentData();
 }
 
 function loadGame() {
   // 永続データを読み込み
   const savedPersistent = localStorage.getItem('periodicTablePersistent');
+  const saved = localStorage.getItem('periodicTableGame');
+  
+  // バージョンチェック（データバージョン = メジャー.マイナーのみで判定）
+  if (saved) {
+    const loaded = parseWithBigInt(saved);
+    const savedDataVersion = loaded.version || 'unknown';
+    if (savedDataVersion !== DATA_VERSION) {
+      // データバージョンが違う場合はデータを初期化
+      console.log(`Data version mismatch: save=${savedDataVersion}, app=${DATA_VERSION}. Resetting data.`);
+      localStorage.removeItem('periodicTableGame');
+      localStorage.removeItem('periodicTablePersistent');
+      showVersionResetNotification(savedDataVersion);
+      return true; // 新規開始
+    }
+  }
+  
   if (savedPersistent) {
     const loaded = parseWithBigInt(savedPersistent);
     persistentState = {
@@ -1648,7 +1681,6 @@ function loadGame() {
     };
   }
 
-  const saved = localStorage.getItem('periodicTableGame');
   if (saved) {
     const loaded = parseWithBigInt(saved);
     // BigInt値の変換を確実に行う
@@ -1679,6 +1711,9 @@ function loadGame() {
   
   // 常にbuyMultiplierを1にリセットして画面表示（x1がactive）と同期
   gameState.buyMultiplier = 1;
+  
+  // セーブデータがなかった場合は新規開始
+  return !saved;
 }
 
 function savePersistentData() {
@@ -1691,15 +1726,52 @@ function savePersistentData() {
 // Auto-save every 10 seconds
 setInterval(saveGame, 10000);
 
+// Version reset notification
+function showVersionResetNotification(oldVersion) {
+  const notification = document.createElement('div');
+  notification.className = 'version-reset-notification';
+  notification.innerHTML = `
+    <div class="version-reset-icon">⚠️</div>
+    <div class="version-reset-content">
+      <div class="version-reset-title">Data Reset</div>
+      <div class="version-reset-message">
+        Save data (v${oldVersion || 'unknown'}) is incompatible with current version (v${APP_VERSION}).<br>
+        Game has been reset to initial state.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 100);
+  
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => notification.remove(), 500);
+  }, 5000);
+}
+
 // ===== Initialization =====
 function init() {
+  // バージョン表示を更新
+  const versionTag = document.getElementById('versionTag');
+  if (versionTag) {
+    versionTag.textContent = 'v' + APP_VERSION;
+  }
+  
   // ELEMENTSを生成
   ELEMENTS = generateElements();
   
   // 実績を生成
   ACHIEVEMENTS = generateAchievements();
   
-  loadGame();
+  const isNewGame = loadGame();
+  
+  // 新規ゲーム開始時は即座にセーブ
+  if (isNewGame) {
+    saveGame();
+  }
 
   // Event listeners
   document.getElementById('clickButton').addEventListener('click', handleClick);
@@ -1738,7 +1810,8 @@ function init() {
     // 新しいゲーム状態で開始（倍率を適用）
     const newState = {
       multiplier: newMultiplier,
-      totalEnergyEarned: gameState.totalEnergyEarned
+      totalEnergyEarned: gameState.totalEnergyEarned,
+      version: DATA_VERSION
     };
     localStorage.setItem('periodicTableGame', stringifyWithBigInt(newState));
     

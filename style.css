@@ -1403,3 +1403,61 @@ body {
     transform: translateX(5px);
     transition: all 0.2s ease;
 }
+
+/* ===== Version Tag ===== */
+.version-tag {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    background: rgba(100, 116, 139, 0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    margin-left: 0.75rem;
+    vertical-align: middle;
+}
+
+/* ===== Version Reset Notification ===== */
+.version-reset-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.1));
+    border: 2px solid #f59e0b;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+    z-index: 10000;
+    transition: transform 0.3s ease-out;
+    max-width: 500px;
+}
+
+.version-reset-notification.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.version-reset-icon {
+    font-size: 2rem;
+}
+
+.version-reset-content {
+    flex: 1;
+}
+
+.version-reset-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: #f59e0b;
+    margin-bottom: 0.25rem;
+}
+
+.version-reset-message {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
